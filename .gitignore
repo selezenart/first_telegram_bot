@@ -1,7 +1,7 @@
 .idea/
 .DS_Store/
 pyenv.cnfg
-pyenv.cfg
+pyvenv.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
