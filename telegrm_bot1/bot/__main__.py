@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import telebot
 from telebot import types
-
 import config
+from chess.models import Board
 
 bot = telebot.TeleBot(config.TOKEN)
-text_message1 = "Man I wanna play some chess!"
-text_message2 = "What's up?"
 
 
 @bot.message_handler(commands=['start'])
@@ -25,9 +23,29 @@ def help_me(message):
                                       "folks! ".format(message.from_user), parse_mode='html')
 
 
+@bot.message_handler(commands=['board'])
+def send_board(message):
+    new_board = Board()
+    markup = types.InlineKeyboardMarkup(row_width=8)
+    for x in range(8):
+        markup.add(*[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y in range(8)])
+    bot.send_message(message.chat.id, "test", reply_markup=markup)
+
+
+@bot.message_handler(commands=['test'])
+def put_pawn(message):
+    markup = types.InlineKeyboardMarkup(row_width=8)
+    markup.add(*[types.InlineKeyboardButton(".", callback_data="empty") for x in range(8)])
+    markup.add(*[types.InlineKeyboardButton(".", callback_data="empty") for x in range(7)],
+               types.InlineKeyboardButton("♙", callback_data="pawn"))
+    bot.send_message(message.chat.id, "pawn", reply_markup=markup)
+
+
+
+
 @bot.message_handler(commands=['chess'])
 def chess(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup = types.InlineKeyboardMarkup(row_width=1)
     item1 = types.InlineKeyboardButton("It sucks...", callback_data="suck")
     item2 = types.InlineKeyboardButton("Fuck you!", callback_data="fuck")
     markup.add(item1, item2)
@@ -41,7 +59,7 @@ def talk(message):
         bot.send_message(message.chat.id, "Man i don't wanna talk to you! I'm glad to talk only with a human but not "
                                           "with {0.first_name}".format(message.from_user), parse_mode="html")
     else:
-        markup = types.InlineKeyboardMarkup(row_width=2)
+        markup = types.InlineKeyboardMarkup(row_width=1)
         item1 = types.InlineKeyboardButton("Sad...", callback_data="sad")
         item2 = types.InlineKeyboardButton("Good, and you?", callback_data="good")
         markup.add(item1, item2)
@@ -64,19 +82,21 @@ def callback_inline(call):
         if call.message:
             if call.data == "suck":
                 bot.send_message(call.message.chat.id, "Just wait a bit, OK?")
-            if call.data == "fuck":
+            elif call.data == "fuck":
                 bot.send_message(call.message.chat.id, "No, fuck you")
-            if call.data == "sad":
+            elif call.data == "sad":
                 bot.send_message(call.message.chat.id, "Well, shit happens")
-            if call.data == "good":
+            elif call.data == "good":
                 bot.send_message(call.message.chat.id, "I am soulless robot. How do you think I can feel?")
+            else:
+                bot.send_message(call.message.chat.id, "Boop")
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="I don't have"
                                                                                                          "that mode "
                                                                                                          "yet, "
                                                                                                          "dumbass" or
                                                                                                          "So, "
                                                                                                          "how are "
-                                                                                                         "you?",
+                                                                                                         "you?" or "test",
                                   reply_markup=None)
     #           bot.answer_callback_query(callback_query_id=call.message.chat.id,show_alert=True,text="SURPRISEMOTHAFAKA!")
 
