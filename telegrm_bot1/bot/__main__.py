@@ -2,9 +2,14 @@
 import telebot
 from telebot import types
 import config
-from chess.models import Board
+
+from game.chess.gamestate import GameState
+from game.chess.models import Board
 
 bot = telebot.TeleBot(config.TOKEN)
+
+new_board = Board()
+game_state = None
 
 
 @bot.message_handler(commands=['start'])
@@ -23,24 +28,27 @@ def help_me(message):
                                       "folks! ".format(message.from_user), parse_mode='html')
 
 
-@bot.message_handler(commands=['board'])
+@bot.message_handler(commands=['init'])
 def send_board(message):
-    new_board = Board()
+    global game_state
+    game_state = GameState(message, new_board)
     markup = types.InlineKeyboardMarkup(row_width=8)
     for x in range(8):
-        markup.add(*[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y in range(8)])
+        markup.add(
+            *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y
+              in range(8)])
     bot.send_message(message.chat.id, "test", reply_markup=markup)
 
 
-@bot.message_handler(commands=['test'])
-def put_pawn(message):
+@bot.message_handler(commands=['update'])
+def update_board(message):
+    new_board.redraw()
     markup = types.InlineKeyboardMarkup(row_width=8)
-    markup.add(*[types.InlineKeyboardButton(".", callback_data="empty") for x in range(8)])
-    markup.add(*[types.InlineKeyboardButton(".", callback_data="empty") for x in range(7)],
-               types.InlineKeyboardButton("♙", callback_data="pawn"))
-    bot.send_message(message.chat.id, "pawn", reply_markup=markup)
-
-
+    for x in range(8):
+        markup.add(
+            *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y
+              in range(8)])
+    bot.send_message(message.chat.id, "test", reply_markup=markup)
 
 
 @bot.message_handler(commands=['chess'])
@@ -88,21 +96,35 @@ def callback_inline(call):
                 bot.send_message(call.message.chat.id, "Well, shit happens")
             elif call.data == "good":
                 bot.send_message(call.message.chat.id, "I am soulless robot. How do you think I can feel?")
+            elif call.data.partition('pawn')[1] == "pawn":
+                game_state.holding_chessman = new_board.get_chessman(call)
+                print(game_state.holding_chessman)
+            elif call.data.partition('empty')[1] == "empty":
+                # bot.send_message(call.message.chat.id, call.data)
+                if game_state.holding_chessman:
+                    new_board.move(game_state.holding_chessman, call.data.split(' ')[1], call.data.split(' ')[2])
+
+                else:
+                    bot.answer_callback_query(callback_query_id=call.message.chat.id, show_alert=True,
+                                              text="You din't chose a chessman")
             else:
-                bot.send_message(call.message.chat.id, "Boop")
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="I don't have"
-                                                                                                         "that mode "
-                                                                                                         "yet, "
-                                                                                                         "dumbass" or
-                                                                                                         "So, "
-                                                                                                         "how are "
-                                                                                                         "you?" or "test",
-                                  reply_markup=None)
-    #           bot.answer_callback_query(callback_query_id=call.message.chat.id,show_alert=True,text="SURPRISEMOTHAFAKA!")
+                bot.send_message(call.message.chat.id, call.data)
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text="I don't have"
+                                           "that mode "
+                                           "yet, "
+                                           "dumbass" or
+                                           "So, "
+                                           "how are "
+                                           "you?" or "test",
+                                      reply_markup=None)
 
     except Exception as e:
         print(repr(e))
 
+
+bot.enable_save_next_step_handlers(delay=2)
+bot.load_next_step_handlers()
 
 # Run
 bot.polling(none_stop=True)
