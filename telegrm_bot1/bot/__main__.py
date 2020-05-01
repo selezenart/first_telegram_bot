@@ -11,8 +11,9 @@ from game.chess.models import Board
 
 bot = telebot.TeleBot(config.TOKEN)
 
-new_board = Board()
-game_state = None
+new_board: Board
+game_state: GameState
+previous_message = None
 
 
 @bot.message_handler(commands=['start'])
@@ -33,14 +34,19 @@ def help_me(message):
 
 @bot.message_handler(commands=['init'])
 def send_board(message):
-    global game_state
+    global previous_message, game_state, new_board
+    if previous_message is not None:
+        bot.delete_message(chat_id=previous_message.chat.id, message_id=previous_message.message_id + 1)
+        bot.delete_message(chat_id=previous_message.chat.id, message_id=previous_message.message_id)
+    previous_message = message
+    new_board = Board()
     game_state = GameState(message, new_board)
     markup = types.InlineKeyboardMarkup(row_width=8)
     for x in range(8):
         markup.add(
             *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y
               in range(8)])
-    bot.send_message(message.chat.id, "test", reply_markup=markup)
+    bot.send_message(message.chat.id, "test message_id:" + str(message.message_id), reply_markup=markup)
 
 
 @bot.message_handler(commands=['chess'])
@@ -82,12 +88,25 @@ def callback_inline(call):
         if call.message:
             if call.data == "suck":
                 bot.send_message(call.message.chat.id, "Just wait a bit, OK?")
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text="I don't have that mode yet, dumbass",
+                                      reply_markup=None)
             elif call.data == "fuck":
                 bot.send_message(call.message.chat.id, "No, fuck you")
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text="I don't have that mode yet, dumbass",
+                                      reply_markup=None)
             elif call.data == "sad":
                 bot.send_message(call.message.chat.id, "Well, shit happens")
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text="So, {0.first_name}, how are you?",
+                                      reply_markup=None)
             elif call.data == "good":
                 bot.send_message(call.message.chat.id, "I am soulless robot. How do you think I can feel?")
+
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text="So, {0.first_name}, how are you?",
+                                      reply_markup=None)
             elif call.data.partition('pawn')[1] == "pawn":
                 if game_state.holding_chessman is not None:
                     if game_state.allow_move(call):
@@ -102,7 +121,7 @@ def callback_inline(call):
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="You cannot choose that chessman!")
-            elif call.data.partition('king')[1]=='king':
+            elif call.data.partition('king')[1] == 'king':
                 if game_state.holding_chessman is not None:
                     if game_state.allow_move:
                         attacked = new_board.get_chessman(call)
@@ -128,10 +147,10 @@ def callback_inline(call):
                             *[types.InlineKeyboardButton(str(new_board.board[x][y]),
                                                          callback_data=new_board.board[x][y].CALLBACK) for y
                               in range(8)])
-                    bot.edit_message_reply_markup(chat_id = call.message.chat.id,
-                                                  message_id = call.message.message_id,
+                    bot.edit_message_reply_markup(chat_id=call.message.chat.id,
+                                                  message_id=call.message.message_id,
                                                   reply_markup=markup)
-                    #bot.edit_message(call.message.chat.id, "test", reply_markup=markup)
+                    # bot.edit_message(call.message.chat.id, "test", reply_markup=markup)
 
                 else:
                     bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
@@ -150,6 +169,7 @@ def callback_inline(call):
 
     except Exception as e:
         print(repr(e))
+
 
 # Run
 bot.polling(none_stop=True)
