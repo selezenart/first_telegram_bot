@@ -10,6 +10,7 @@ class Color(Enum):
 
 class Chessman(object):
     IMG = None
+    color: Color
     X : int
     Y : int
     CALLBACK = None
@@ -26,6 +27,7 @@ class Chessman(object):
         # else:
         #    return 1
         return self.IMG[0 if self.color == Color.WHITE else 1]
+
 
 
 class Nothing(object):
@@ -58,7 +60,7 @@ class Pawn(Chessman):
 
 class King(Chessman):
     IMG = ("♔", "♚")
-
+    CALLBACK = "king"
     def get_moves(self, board, x, y):
         moves = []
         return moves
@@ -82,22 +84,13 @@ class Board(object):
         pawn6 = Pawn(Color.WHITE, 5, 1, 6)
         pawn7 = Pawn(Color.WHITE, 6, 1, 7)
         pawn8 = Pawn(Color.WHITE, 7, 1, 8)
+        king2 = King(Color.BLACK, 4, 6, 2)
+        self.chessmen_list.append(king2)
         pawns = [pawn1, pawn2, pawn3, pawn4, pawn5, pawn6, pawn7, pawn8]
         for pawn in pawns:
             self.chessmen_list.append(pawn)
         for chess in self.chessmen_list:
             self.put_chessman(chess)
-
-    def redraw(self):
-        for x in range(8):
-            for y in range(8):
-                self.board[y][x] = Nothing( x, y)
-        for ch in self.chessmen_list:
-            self.board[ch.Y][ch.X]=ch
-
-
-    #def clear(self):
-
 
     def __str__(self):
         cells = [43, 45]
@@ -110,6 +103,13 @@ class Board(object):
             i = 1 - i
             res += self.set_color(0) + '\n'
         return res
+
+    def redraw(self):
+        for x in range(8):
+            for y in range(8):
+                self.board[y][x] = Nothing( x, y)
+        for ch in self.chessmen_list:
+            self.board[ch.Y][ch.X]=ch
 
     def put_chessman(self, chessman):
         for i in range(8):
@@ -131,6 +131,7 @@ class Board(object):
         self.board[chessman.X][chessman.Y] = empty_cell
         chessman.X = new_x
         chessman.Y = new_y
+
 
     def get_color(self, x, y):
         return self.board[x][y].color

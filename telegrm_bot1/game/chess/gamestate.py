@@ -25,8 +25,27 @@ class GameState:
         else:
             raise Exception("Color Error")
 
+    def capture_chessman(self, chessman):
+        self.holding_chessman = chessman
+
     def is_holding(self, chessman):
         for ch in self.board.chessmen_list:
             if ch.CALLBACK == chessman.CALLBACK:
                 return True
         return False
+
+    def leave_chessman(self):
+        if self.holding_chessman is not None:
+            self.holding_chessman = None
+
+    def allow_turn(self, chessman_call):
+        if self.board.get_chessman(chessman_call).color == self.turn:
+            return True
+        else:
+            return False
+
+    def allow_move(self, chessman_call):
+        if self.board.get_chessman(chessman_call).color != self.holding_chessman.color:
+            return True
+        else:
+            return False
