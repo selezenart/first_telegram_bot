@@ -39,13 +39,32 @@ class GameState:
             self.holding_chessman = None
 
     def allow_turn(self, chessman_call):
-        if self.board.get_chessman(chessman_call).color == self.turn:
+        if self.board.get_chessman_call(chessman_call).color == self.turn:
             return True
         else:
             return False
 
-    def allow_move(self, chessman_call):
-        if self.board.get_chessman(chessman_call).color != self.holding_chessman.color:
+    def allow_attack(self, chessman_call, x, y):
+        chessman = self.board.get_chessman_call(chessman_call)
+        if self.check_move(int(x), int(y), chessman) and self.check_move_color(chessman, int(x), int(y)):
+            return True
+        else:
+            return False
+
+    def allow_move(self, x, y, chessman_call):
+        if self.check_move(int(x), int(y), chessman_call):
+            return True
+        else:
+             return False
+
+    def check_move_color(self, chessman, x, y):
+        if chessman.color != self.holding_chessman.color:
+            return True
+        else:
+            return False
+
+    def check_move(self, x, y, chessman):
+        if chessman.get_moves().count([x,y]):
             return True
         else:
             return False

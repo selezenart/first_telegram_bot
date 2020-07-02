@@ -11,8 +11,8 @@ class Color(Enum):
 class Chessman(object):
     IMG = None
     color: Color
-    X : int
-    Y : int
+    X: int
+    Y: int
     CALLBACK = None
 
     def __init__(self, color, x, y, number):
@@ -29,12 +29,12 @@ class Chessman(object):
         return self.IMG[0 if self.color == Color.WHITE else 1]
 
 
-
 class Nothing(object):
     CALLBACK = "empty"
     Color = Color.NONE
-    X:int
-    Y:int
+    X: int
+    Y: int
+
     def __init__(self, x, y):
         self.X = x
         self.Y = y
@@ -51,19 +51,17 @@ class Pawn(Chessman):
     IMG = ("♙", "♟")
     CALLBACK = "pawn"
 
-    def get_moves(self, board, x, y):
+    def get_moves(self):
         moves = []
-        if self.color == Color.BLACK and y < 7 and board.get_color(x, y) == Color.NONE:
-            moves.append([x, y + 1])
+        if self.Y<7:
+            moves.append([self.X, self.Y + 1])
         return moves
+
 
 
 class King(Chessman):
     IMG = ("♔", "♚")
     CALLBACK = "king"
-    def get_moves(self, board, x, y):
-        moves = []
-        return moves
 
 
 class Board(object):
@@ -74,7 +72,7 @@ class Board(object):
         self.board = numpy.empty(shape=(8, 8), dtype='object')
         for x in range(8):
             for y in range(8):
-                self.board[y][x] = Nothing( x, y)
+                self.board[y][x] = Nothing(x, y)
 
         pawn1 = Pawn(Color.WHITE, 0, 1, 1)
         pawn2 = Pawn(Color.WHITE, 1, 1, 2)
@@ -107,9 +105,9 @@ class Board(object):
     def redraw(self):
         for x in range(8):
             for y in range(8):
-                self.board[y][x] = Nothing( x, y)
+                self.board[y][x] = Nothing(x, y)
         for ch in self.chessmen_list:
-            self.board[ch.Y][ch.X]=ch
+            self.board[ch.Y][ch.X] = ch
 
     def put_chessman(self, chessman):
         for i in range(8):
@@ -118,20 +116,23 @@ class Board(object):
                     if j == chessman.Y:
                         self.board[chessman.Y][chessman.X] = chessman
 
-    def get_chessman(self, callback):
+    def get_chessman(self, x, y):
+        return self.board[x][y]
+
+    def get_chessman_call(self, callback):
         for ch in self.chessmen_list:
             if callback.data == ch.CALLBACK:
                 return ch
+        #return Nothing(callback.data.split(' ')[1], callback.data.split(' ')[2])
 
     def move(self, chessman, new_x, new_y):
         new_x = int(new_x)
-        new_y=int(new_y)
+        new_y = int(new_y)
         self.board[new_x][new_y] = chessman
         empty_cell = Nothing(chessman.X, chessman.Y)
         self.board[chessman.X][chessman.Y] = empty_cell
         chessman.X = new_x
         chessman.Y = new_y
-
 
     def get_color(self, x, y):
         return self.board[x][y].color
