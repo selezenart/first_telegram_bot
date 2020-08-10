@@ -42,9 +42,9 @@ def send_board(message):
     new_board = Board()
     game_state = GameState(message, new_board)
     markup = types.InlineKeyboardMarkup(row_width=8)
-    for x in range(8):
+    for y in range(8):
         markup.add(
-            *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for y
+            *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for x
               in range(8)])
     bot.send_message(message.chat.id, "test message_id:" + str(message.message_id), reply_markup=markup)
 
@@ -109,6 +109,7 @@ def callback_inline(call):
                                       reply_markup=None)
             elif call.data.partition('pawn')[1] == "pawn":
                 attacked = new_board.get_chessman_call(call)
+                print(str(attacked.X)+" "+str(attacked.Y))
                 if game_state.holding_chessman is not None:
                     if game_state.allow_attack(call, attacked.X, attacked.Y):
                         new_board.move(game_state.holding_chessman, attacked.X, attacked.Y)
@@ -126,6 +127,17 @@ def callback_inline(call):
                 if game_state.holding_chessman is not None:
                     if game_state.allow_attack(call,attacked.X, attacked.Y):
                         new_board.move(game_state.holding_chessman, attacked.X, attacked.Y)
+                        game_state.leave_chessman()
+                        new_board.redraw()
+                        markup = types.InlineKeyboardMarkup(row_width=8)
+                        for y in range(8):
+                            markup.add(
+                                *[types.InlineKeyboardButton(str(new_board.board[x][y]),
+                                                             callback_data=new_board.board[x][y].CALLBACK) for x
+                                  in range(8)])
+                        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
+                                                      message_id=call.message.message_id,
+                                                      reply_markup=markup)
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="This cell is already taken!")
@@ -137,17 +149,17 @@ def callback_inline(call):
                                                   text="You cannot choose that chessman!")
             elif call.data.partition('empty')[1] == "empty":
                 # bot.send_message(call.message.chat.id, call.data)
-
+                print(call.data)
                 if game_state.holding_chessman is not None:
                     if game_state.allow_move(call.data.split(' ')[1], call.data.split(' ')[2], game_state.holding_chessman):
                         new_board.move(game_state.holding_chessman,call.data.split(' ')[1], call.data.split(' ')[2])
                         game_state.leave_chessman()
                         new_board.redraw()
                         markup = types.InlineKeyboardMarkup(row_width=8)
-                        for x in range(8):
+                        for y in range(8):
                             markup.add(
                                 *[types.InlineKeyboardButton(str(new_board.board[x][y]),
-                                                             callback_data=new_board.board[x][y].CALLBACK) for y
+                                                             callback_data=new_board.board[x][y].CALLBACK) for x
                                   in range(8)])
                         bot.edit_message_reply_markup(chat_id=call.message.chat.id,
                                                       message_id=call.message.message_id,
