@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import telebot
 from telebot import types
-from telegram import update
-from telegram.ext import Updater
-
 import config
 
 from game.chess.gamestate import GameState
@@ -14,6 +11,22 @@ bot = telebot.TeleBot(config.TOKEN)
 new_board: Board
 game_state: GameState
 previous_message = None
+
+
+def refresh_board(call, board_x, board_y):
+    new_board.move(game_state.holding_chessman, board_x, board_y)
+    game_state.leave_chessman()
+    game_state.change_turn()
+    bot.edit_message_text("Turn " + game_state.turn.value, call.message.chat.id, call.message.message_id)
+    new_board.redraw()
+    markup = types.InlineKeyboardMarkup(row_width=8)
+    for y in range(8):
+        markup.add(
+            *[types.InlineKeyboardButton(str(new_board.board[x][y]),
+                                         callback_data=new_board.board[x][y].CALLBACK) for x in range(8)])
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id,
+                                  reply_markup=markup)
 
 
 @bot.message_handler(commands=['start'])
@@ -46,7 +59,7 @@ def send_board(message):
         markup.add(
             *[types.InlineKeyboardButton(str(new_board.board[x][y]), callback_data=new_board.board[x][y].CALLBACK) for x
               in range(8)])
-    bot.send_message(message.chat.id, "test message_id:" + str(message.message_id), reply_markup=markup)
+    bot.send_message(message.chat.id, "Turn " + game_state.turn.value, reply_markup=markup)
 
 
 @bot.message_handler(commands=['chess'])
@@ -84,7 +97,7 @@ def reply(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-    #try:
+    try:
         if call.message:
             if call.data == "suck":
                 bot.send_message(call.message.chat.id, "Just wait a bit, OK?")
@@ -109,10 +122,9 @@ def callback_inline(call):
                                       reply_markup=None)
             elif call.data.partition('pawn')[1] == "pawn":
                 attacked = new_board.get_chessman_call(call)
-                print(str(attacked.X)+" "+str(attacked.Y))
                 if game_state.holding_chessman is not None:
                     if game_state.allow_attack(call, attacked.X, attacked.Y):
-                        new_board.move(game_state.holding_chessman, attacked.X, attacked.Y)
+                        refresh_board(call, attacked.X, attacked.Y)
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="Invalid move!")
@@ -125,50 +137,25 @@ def callback_inline(call):
             elif call.data.partition('king')[1] == 'king':
                 attacked = new_board.get_chessman_call(call)
                 if game_state.holding_chessman is not None:
-                    if game_state.allow_attack(call,attacked.X, attacked.Y):
-                        new_board.move(game_state.holding_chessman, attacked.X, attacked.Y)
-                        game_state.leave_chessman()
-                        new_board.redraw()
-                        markup = types.InlineKeyboardMarkup(row_width=8)
-                        for y in range(8):
-                            markup.add(
-                                *[types.InlineKeyboardButton(str(new_board.board[x][y]),
-                                                             callback_data=new_board.board[x][y].CALLBACK) for x
-                                  in range(8)])
-                        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                                      message_id=call.message.message_id,
-                                                      reply_markup=markup)
+                    if game_state.allow_attack(call, attacked.X, attacked.Y):
+                        refresh_board(call, attacked.X, attacked.Y)
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="This cell is already taken!")
                 else:
                     if game_state.allow_turn(call):
-                        game_state.capture_chessman(call)
+                        game_state.capture_chessman(new_board.get_chessman_call(call))
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="You cannot choose that chessman!")
             elif call.data.partition('empty')[1] == "empty":
-                # bot.send_message(call.message.chat.id, call.data)
-                print(call.data)
                 if game_state.holding_chessman is not None:
-                    if game_state.allow_move(call.data.split(' ')[1], call.data.split(' ')[2], game_state.holding_chessman):
-                        new_board.move(game_state.holding_chessman,call.data.split(' ')[1], call.data.split(' ')[2])
-                        game_state.leave_chessman()
-                        new_board.redraw()
-                        markup = types.InlineKeyboardMarkup(row_width=8)
-                        for y in range(8):
-                            markup.add(
-                                *[types.InlineKeyboardButton(str(new_board.board[x][y]),
-                                                             callback_data=new_board.board[x][y].CALLBACK) for x
-                                  in range(8)])
-                        bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                                      message_id=call.message.message_id,
-                                                      reply_markup=markup)
+                    if game_state.allow_move(call.data.split(' ')[1], call.data.split(' ')[2],
+                                             game_state.holding_chessman):
+                        refresh_board(call, call.data.split(' ')[1], call.data.split(' ')[2])
                     else:
                         bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                                   text="Invalid move!")
-                    # bot.edit_message(call.message.chat.id, "test", reply_markup=markup)
-
                 else:
                     bot.answer_callback_query(callback_query_id=call.id, show_alert=True,
                                               text="You did'nt choose a chessman!")
@@ -184,9 +171,8 @@ def callback_inline(call):
                                            "you?" or "test",
                                       reply_markup=None)
 
-    #except Exception as e:
-    #    print(repr(e))
+    except Exception as e:
+        print(repr(e))
 
 
-# Run
 bot.polling(none_stop=True)
